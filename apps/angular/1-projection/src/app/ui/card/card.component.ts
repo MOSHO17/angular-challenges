@@ -1,54 +1,44 @@
-import { Component, EventEmitter, inject, input, Output } from '@angular/core';
-import { randStudent, randTeacher } from '../../data-access/fake-http.service';
-import { StudentStore } from '../../data-access/student.store';
-import { TeacherStore } from '../../data-access/teacher.store';
-import { CardType } from '../../model/card.model';
-import { ListItemComponent } from '../list-item/list-item.component';
+import { NgFor, NgIf, NgTemplateOutlet } from '@angular/common';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ContentChild,
+  EventEmitter,
+  Input,
+  Output,
+  TemplateRef,
+} from '@angular/core';
 
 @Component({
   selector: 'app-card',
   template: `
-    <div
-      class="flex w-fit flex-col gap-3 rounded-md border-2 border-black p-4"
-      [class]="customClass()">
-      <ng-content select="img"></ng-content>
+    <ng-content select="img"></ng-content>
 
-      <section>
-        @for (item of list(); track item) {
-          <app-list-item
-            [name]="item.firstName"
-            [id]="item.id"
-            [type]="type()"></app-list-item>
-        }
-      </section>
+    <section>
+      <ng-container *ngFor="let item of list">
+        <ng-template
+          [ngTemplateOutlet]="rowTemplate"
+          [ngTemplateOutletContext]="{ $implicit: item }"></ng-template>
+      </ng-container>
+    </section>
 
-      <button
-        class="rounded-sm border border-blue-500 bg-blue-300 p-2"
-        (click)="add.emit()">
-        Add
-      </button>
-    </div>
+    <button
+      class="rounded-sm border border-blue-500 bg-blue-300 p-2"
+      (click)="add.emit()">
+      Add
+    </button>
   `,
-  imports: [ListItemComponent],
+  standalone: true,
+  imports: [NgIf, NgFor, NgTemplateOutlet],
+  host: {
+    class: 'border-2 border-black rounded-md p-4 w-fit flex flex-col gap-3',
+  },
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class CardComponent {
-  private teacherStore = inject(TeacherStore);
-  private studentStore = inject(StudentStore);
-
-  readonly list = input<any[] | null>(null);
-  readonly type = input.required<CardType>();
-  readonly customClass = input('');
-
-  CardType = CardType;
-
+export class CardComponent<T> {
+  @Input() list: T[] | null = null;
   @Output() add = new EventEmitter<void>();
 
-  addNewItem() {
-    const type = this.type();
-    if (type === CardType.TEACHER) {
-      this.teacherStore.addOne(randTeacher());
-    } else if (type === CardType.STUDENT) {
-      this.studentStore.addOne(randStudent());
-    }
-  }
+  @ContentChild('rowRef', { read: TemplateRef })
+  rowTemplate!: TemplateRef<{ $implicit: T }>;
 }
